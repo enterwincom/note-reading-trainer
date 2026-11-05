@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>음표 읽기 마스터 (Note Reading Trainer Pro)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    
+    /* Custom Keycap Effects */
+    .keycap {
+      box-shadow: 0 4px 0 #1e293b, 0 6px 12px rgba(0,0,0,0.3);
+      transition: all 0.08s ease;
+      touch-action: manipulation;
+    }
+    .keycap:active, .keycap.active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #1e293b, 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Staff & Glow Effects */
+    .staff-glow-correct {
+      animation: glowCorrect 0.5s ease-out;
+    }
+    .staff-glow-wrong {
+      animation: glowWrong 0.5s ease-out;
+    }
+
+    @keyframes glowCorrect {
+      0% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
+      50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.6), inset 0 0 15px rgba(34, 197, 94, 0.3); }
+      100% { box-shadow: 0 0 0px rgba(34, 197, 94, 0); }
+    }
+
+    @keyframes glowWrong {
+      0% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); }
+      50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.6), inset 0 0 15px rgba(239, 68, 68, 0.3); }
+      100% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); }
+    }
+
+    /* Combo Pop Animation */
+    .combo-pop {
+      animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Smooth Note Movement */
+    #note-group {
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between p-3 sm:p-6 select-none">
+
+  <!-- TOP HEADER -->
+  <header class="max-w-4xl w-full mx-auto flex flex-col md:flex-row justify-between items-center gap-4 mb-2 sm:mb-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-600/30 p-2.5 rounded-2xl border border-indigo-500/30 text-indigo-400">
+        <i class="fa-solid fa-music text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+          음표 읽기 마스터 <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PRO</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400">오선지 위의 음을 맞추며 독보력을 키우세요!</p>
+      </div>
+    </div>
+
+    <!-- Quick Settings Bar -->
+    <div class="flex flex-wrap items-center justify-center gap-2 bg-slate-900/90 p-2 rounded-2xl border border-slate-800 shadow-xl backdrop-blur-md">
+      <!-- Clef Selection -->
+      <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <button id="clef-treble" onclick="setClef('treble')" class="clef-btn px-2.5 py-1.5 rounded-lg font-bold transition-all bg-indigo-600 text-white shadow">🎼 높은음</button>
+        <button id="clef-bass" onclick="setClef('bass')" class="clef-btn px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all">𝄢 낮음음</button>
+        <button id="clef-mixed" onclick="setClef('mixed')" class="clef-btn px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all">🔀 혼합</button>
+      </div>
+
+      <!-- Notation System Toggle -->
+      <button onclick="toggleNotationSystem()" id="notation-toggle-btn" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-indigo-300 border border-slate-700 transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-language text-indigo-400"></i> <span id="notation-label">표기: CDEFG</span>
+      </button>
+
+      <!-- Cheat Sheet Toggle -->
+      <button onclick="toggleCheatSheet()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 border border-slate-700 transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-graduation-cap text-amber-400"></i> 계이름표
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN GAME AREA -->
+  <main class="max-w-4xl w-full mx-auto flex-1 flex flex-col justify-center items-center gap-3 sm:gap-6">
+
+    <!-- Mode & Difficulty Selectors -->
+    <div class="w-full flex flex-wrap justify-between items-center gap-2 bg-slate-900/60 p-2 rounded-2xl border border-slate-800/80">
+      
+      <!-- Difficulty Tabs -->
+      <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto justify-center">
+        <span class="text-slate-500 font-medium px-1.5 hidden md:inline">난이도:</span>
+        <button id="diff-easy" onclick="setDifficulty('easy')" class="diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold bg-emerald-600 text-white shadow transition-all flex-1 sm:flex-initial text-center">쉬움 (기본)</button>
+        <button id="diff-medium" onclick="setDifficulty('medium')" class="diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all flex-1 sm:flex-initial text-center">보통 (덧줄)</button>
+        <button id="diff-timeattack" onclick="setDifficulty('timeattack')" class="diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-slate-400 hover:text-rose-400 transition-all flex items-center justify-center gap-1 flex-1 sm:flex-initial">
+          <i class="fa-solid fa-stopwatch text-rose-500"></i> 타임어택
+        </button>
+        <!-- Reset Button inside the difficulty control group -->
+        <button onclick="resetStats()" class="px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-slate-400 hover:text-rose-400 hover:bg-slate-900 transition-all flex items-center justify-center gap-1 flex-1 sm:flex-initial" title="기록 초기화">
+          <i class="fa-solid fa-rotate-right text-rose-400"></i> <span class="hidden sm:inline">초기화</span>
+        </button>
+      </div>
+
+      <!-- Time Attack Timer (Hidden by default) -->
+      <div id="timer-box" class="hidden flex items-center justify-center gap-2 px-3 py-1 rounded-xl bg-rose-950/60 border border-rose-500/30 text-rose-300 font-extrabold text-xs sm:text-base w-full sm:w-auto">
+        <i class="fa-solid fa-hourglass-half animate-spin text-rose-400"></i>
+        <span>남은 시간: <span id="timer-display" class="text-white font-mono text-base sm:text-lg">60</span>초</span>
+      </div>
+    </div>
+
+    <!-- Stats Dashboard -->
+    <div class="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-center">
+      <!-- Accuracy -->
+      <div class="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-3 rounded-2xl flex flex-col justify-center backdrop-blur shadow-lg">
+        <span class="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">정확도</span>
+        <span id="stat-accuracy" class="text-lg sm:text-2xl font-black text-emerald-400 font-mono">0.0%</span>
+      </div>
+
+      <!-- Combo Streak -->
+      <div class="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-3 rounded-2xl flex flex-col justify-center backdrop-blur shadow-lg relative overflow-hidden">
+        <span class="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">연속 정답</span>
+        <span id="stat-streak" class="text-lg sm:text-2xl font-black text-amber-400 font-mono">0 <span class="text-xs sm:text-sm">🔥</span></span>
+      </div>
+
+      <!-- Score / Correct Count -->
+      <div class="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-3 rounded-2xl flex flex-col justify-center backdrop-blur shadow-lg">
+        <span class="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">맞힌 개수</span>
+        <span id="stat-count" class="text-lg sm:text-2xl font-black text-indigo-400 font-mono">0 / 0</span>
+      </div>
+
+      <!-- Best High Score -->
+      <div class="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-3 rounded-2xl flex flex-col justify-center backdrop-blur shadow-lg">
+        <span class="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">최고 점수</span>
+        <span id="stat-best" class="text-lg sm:text-2xl font-black text-purple-400 font-mono">0</span>
+      </div>
+    </div>
+
+    <!-- Musical Staff Canvas Viewport -->
+    <div id="staff-card" class="w-full bg-slate-900/90 border-2 border-slate-800 rounded-3xl p-2 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col items-center justify-center min-h-[170px] sm:min-h-[250px]">
+      
+      <!-- Current Clef & Mode Label -->
+      <div id="clef-indicator" class="absolute top-3 left-3 sm:top-4 sm:left-5 text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800/90 text-slate-300 border border-slate-700/80 shadow-md">
+        높은음자리표 (Treble)
+      </div>
+
+      <!-- Dynamic Feedback Banner -->
+      <div id="feedback-banner" class="absolute top-3 right-3 sm:top-4 sm:right-5 text-[11px] sm:text-sm font-black px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl opacity-0 transition-all duration-300 transform -translate-y-2 shadow-lg">
+        <!-- Text rendered via JS -->
+      </div>
+
+      <!-- Milestone Streak Popup Overlay -->
+      <div id="streak-popup" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center pointer-events-none">
+        <div class="combo-pop text-center">
+          <div id="streak-pop-title" class="text-3xl sm:text-5xl font-black text-amber-400 drop-shadow-lg">10 COMBO!</div>
+          <div id="streak-pop-sub" class="text-sm sm:text-base text-amber-200 mt-1 font-semibold">완벽해요! 계속 유지하세요! 🔥</div>
+        </div>
+      </div>
+
+      <!-- Time Attack Game Over Modal Overlay -->
+      <div id="gameover-modal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-sm w-full shadow-2xl">
+          <div class="text-4xl mb-2">⏱️</div>
+          <h2 class="text-2xl font-black text-white mb-1">시간 종료!</h2>
+          <p class="text-xs text-slate-400 mb-4">60초 타임어택 도전 결과입니다.</p>
+          
+          <div class="space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800/80 mb-5 text-left text-sm">
+            <div class="flex justify-between"><span class="text-slate-400">총 점수:</span> <span id="modal-score" class="font-bold text-amber-400">0점</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">정확도:</span> <span id="modal-accuracy" class="font-bold text-emerald-400">0%</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">최대 연속 정답:</span> <span id="modal-maxstreak" class="font-bold text-indigo-400">0회</span></div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="stopTimeAttackMode()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 font-bold text-slate-300 rounded-xl border border-slate-700 transition-all text-sm">
+              멈추기
+            </button>
+            <button onclick="restartGame()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 font-bold text-white rounded-xl shadow-lg transition-all text-sm">
+              다시 도전하기
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SVG Staff Rendering Engine -->
+      <svg id="svg-staff" viewBox="0 0 400 180" class="w-full max-w-lg h-auto select-none overflow-visible my-2">
+        <defs>
+          <g id="treble-clef">
+            <text x="35" y="118" font-family="'Times New Roman', serif" font-size="82" fill="#e2e8f0" text-anchor="middle">🎼</text>
+          </g>
+          <g id="bass-clef">
+            <text x="35" y="98" font-family="'Times New Roman', serif" font-size="62" fill="#e2e8f0" text-anchor="middle">𝄢</text>
+          </g>
+        </defs>
+
+        <!-- 5 Main Staff Lines -->
+        <g stroke="#64748b" stroke-width="2">
+          <line x1="20" y1="50" x2="380" y2="50" />
+          <line x1="20" y1="66" x2="380" y2="66" />
+          <line x1="20" y1="82" x2="380" y2="82" />
+          <line x1="20" y1="98" x2="380" y2="98" />
+          <line x1="20" y1="114" x2="380" y2="114" />
+          
+          <line x1="20" y1="50" x2="20" y2="114" stroke-width="3"/>
+          <line x1="380" y1="50" x2="380" y2="114" stroke-width="3"/>
+        </g>
+
+        <!-- Clef Symbol Container -->
+        <use id="rendered-clef" href="#treble-clef" />
+
+        <!-- Ledger Lines Layer -->
+        <g id="ledger-lines" stroke="#94a3b8" stroke-width="2">
+          <!-- Dynamically populated -->
+        </g>
+
+        <!-- Note Group (Notehead + Stem) -->
+        <g id="note-group" transform="translate(200, 82)">
+          <ellipse cx="0" cy="0" rx="10" ry="7.5" fill="#f8fafc" transform="rotate(-20)" />
+          <line id="note-stem" x1="9" y1="0" x2="9" y2="-45" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- On-screen Keyboard / Answer Input Buttons -->
+    <div class="w-full">
+      <div class="text-center text-[11px] sm:text-xs text-slate-400 mb-1.5 font-medium flex items-center justify-center gap-1.5">
+        <span>키보드 <span class="text-indigo-400 font-bold">A ~ G</span> 또는 버튼 선택</span>
+      </div>
+
+      <!-- Key Buttons Container (7 Notes) -->
+      <div id="keyboard-buttons" class="grid grid-cols-7 gap-1 sm:gap-3 max-w-2xl mx-auto">
+        <!-- Dynamically rendered based on active notation system -->
+      </div>
+    </div>
+  </main>
+
+  <!-- CHEAT SHEET MODAL -->
+  <div id="cheatsheet-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-3xl max-w-xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="toggleCheatSheet()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      
+      <h3 class="text-lg font-black text-white mb-1 flex items-center gap-2">
+        <i class="fa-solid fa-graduation-cap text-amber-400"></i> 계이름 참고표 (Cheat Sheet)
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">높은음자리표와 낮음음자리표의 음자리 위치를 한눈에 익혀보세요.</p>
+
+      <!-- Reference Tables -->
+      <div class="space-y-4 text-xs">
+        <!-- Treble Clef Chart -->
+        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div class="font-bold text-indigo-400 mb-2 flex items-center gap-1">🎼 높은음자리표 (Treble Clef)</div>
+          <div class="grid grid-cols-7 gap-1 text-center font-mono">
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄1</span><span class="font-bold text-white">E</span><span class="block text-slate-500 text-[9px]">미</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸1</span><span class="font-bold text-white">F</span><span class="block text-slate-500 text-[9px]">파</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄2</span><span class="font-bold text-white">G</span><span class="block text-slate-500 text-[9px]">솔</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸2</span><span class="font-bold text-white">A</span><span class="block text-slate-500 text-[9px]">라</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄3</span><span class="font-bold text-white">B</span><span class="block text-slate-500 text-[9px]">시</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸3</span><span class="font-bold text-white">C</span><span class="block text-slate-500 text-[9px]">도</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄4</span><span class="font-bold text-white">D</span><span class="block text-slate-500 text-[9px]">레</span></div>
+          </div>
+        </div>
+
+        <!-- Bass Clef Chart -->
+        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+          <div class="font-bold text-amber-400 mb-2 flex items-center gap-1">𝄢 낮음음자리표 (Bass Clef)</div>
+          <div class="grid grid-cols-7 gap-1 text-center font-mono">
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄1</span><span class="font-bold text-white">G</span><span class="block text-slate-500 text-[9px]">솔</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸1</span><span class="font-bold text-white">A</span><span class="block text-slate-500 text-[9px]">라</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄2</span><span class="font-bold text-white">B</span><span class="block text-slate-500 text-[9px]">시</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸2</span><span class="font-bold text-white">C</span><span class="block text-slate-500 text-[9px]">도</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄3</span><span class="font-bold text-white">D</span><span class="block text-slate-500 text-[9px]">레</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">칸3</span><span class="font-bold text-white">E</span><span class="block text-slate-500 text-[9px]">미</span></div>
+            <div class="bg-slate-900 p-2 rounded-xl"><span class="block text-slate-400 text-[10px]">줄4</span><span class="font-bold text-white">F</span><span class="block text-slate-500 text-[9px]">파</span></div>
+          </div>
+        </div>
+
+        <div class="p-3 bg-indigo-950/40 border border-indigo-800/40 rounded-xl text-indigo-300">
+          💡 <strong>Tip:</strong> 가온 다(Middle C, C4)는 높은음자리표의 아래 첫 번째 덧줄, 낮음음자리표의 위 첫 번째 덧줄입니다!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="max-w-4xl w-full mx-auto flex justify-center items-center gap-2 mt-2 pt-2 border-t border-slate-900 text-xs text-slate-400">
+    <span>© Note Reading Trainer Pro</span>
+  </footer>
+
+  <!-- SCRIPT LOGIC ENGINE -->
+  <script>
+    /* ==========================================================================
+       GLOBAL STATE & DOM ELEMENTS
+       ========================================================================== */
+    let currentClefMode = 'treble'; // treble, bass, mixed
+    let activeClef = 'treble';
+    let currentDifficulty = 'easy'; // easy, medium, timeattack
+    let notationSystem = 'CDEFG';   // CDEFG, SOLFEGE
+    let currentNote = null;
+    let isProcessingAnswer = false;
+
+    // Statistics
+    let totalAttempts = 0;
+    let correctCount = 0;
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let currentScore = 0;
+    let bestScore = 0;
+
+    // Timer (Time Attack)
+    let timerInterval = null;
+    let timeLeft = 60;
+    let isTimerActive = false;
+
+    // DOM Elements
+    const staffCard = document.getElementById('staff-card');
+    const svgStaff = document.getElementById('svg-staff');
+    const renderedClef = document.getElementById('rendered-clef');
+    const ledgerLinesGroup = document.getElementById('ledger-lines');
+    const noteGroup = document.getElementById('note-group');
+    const noteStem = document.getElementById('note-stem');
+    const clefIndicator = document.getElementById('clef-indicator');
+    const feedbackBanner = document.getElementById('feedback-banner');
+    const keyboardButtonsContainer = document.getElementById('keyboard-buttons');
+
+    // Stat Displays
+    const statAccuracy = document.getElementById('stat-accuracy');
+    const statStreak = document.getElementById('stat-streak');
+    const statCount = document.getElementById('stat-count');
+    const statBest = document.getElementById('stat-best');
+
+    /* ==========================================================================
+       NOTE DICTIONARIES
+       ========================================================================== */
+    
+    // Notes mapping dictionary (Letter vs Solfège)
+    const NOTE_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    const SOLFEGE_MAP = {
+      'C': '도', 'D': '레', 'E': '미', 'F': '파', 'G': '솔', 'A': '라', 'B': '시'
+    };
+
+    // Treble Clef Note Pool
+    const TREBLE_NOTES_EASY = [
+      { name: 'E', octave: 4, label: 'E4', step: 0,  freq: 329.63 }, // Line 1
+      { name: 'F', octave: 4, label: 'F4', step: 1,  freq: 349.23 },
+      { name: 'G', octave: 4, label: 'G4', step: 2,  freq: 392.00 },
+      { name: 'A', octave: 4, label: 'A4', step: 3,  freq: 440.00 },
+      { name: 'B', octave: 4, label: 'B4', step: 4,  freq: 493.88 },
+      { name: 'C', octave: 5, label: 'C5', step: 5,  freq: 523.25 },
+      { name: 'D', octave: 5, label: 'D5', step: 6,  freq: 587.33 },
+      { name: 'E', octave: 5, label: 'E5', step: 7,  freq: 659.25 },
+      { name: 'F', octave: 5, label: 'F5', step: 8,  freq: 698.46 }  // Line 5
+    ];
+
+    const TREBLE_NOTES_EXTENDED = [
+      { name: 'C', octave: 4, label: 'C4', step: -2, freq: 261.63 }, // Middle C
+      { name: 'D', octave: 4, label: 'D4', step: -1, freq: 293.66 },
+      ...TREBLE_NOTES_EASY,
+      { name: 'G', octave: 5, label: 'G5', step: 9,  freq: 783.99 },
+      { name: 'A', octave: 5, label: 'A5', step: 10, freq: 880.00 }
+    ];
+
+    // Bass Clef Note Pool
+    const BASS_NOTES_EASY = [
+      { name: 'G', octave: 2, label: 'G2', step: 0,  freq: 98.00 },  // Line 1
+      { name: 'A', octave: 2, label: 'A2', step: 1,  freq: 110.00 },
+      { name: 'B', octave: 2, label: 'B2', step: 2,  freq: 123.47 },
+      { name: 'C', octave: 3, label: 'C3', step: 3,  freq: 130.81 },
+      { name: 'D', octave: 3, label: 'D3', step: 4,  freq: 146.83 },
+      { name: 'E', octave: 3, label: 'E3', step: 5,  freq: 164.81 },
+      { name: 'F', octave: 3, label: 'F3', step: 6,  freq: 174.61 },
+      { name: 'G', octave: 3, label: 'G3', step: 7,  freq: 196.00 },
+      { name: 'A', octave: 3, label: 'A3', step: 8,  freq: 220.00 }  // Line 5
+    ];
+
+    const BASS_NOTES_EXTENDED = [
+      { name: 'E', octave: 2, label: 'E2', step: -2, freq: 82.41 },
+      { name: 'F', octave: 2, label: 'F2', step: -1, freq: 87.31 },
+      ...BASS_NOTES_EASY,
+      { name: 'B', octave: 3, label: 'B3', step: 9,  freq: 246.94 },
+      { name: 'C', octave: 4, label: 'C4', step: 10, freq: 261.63 }  // Middle C
+    ];
+
+    /* ==========================================================================
+       SOUND SYNTHESIZER (Ding-Dong for Correct & Buzz for Incorrect)
+       ========================================================================== */
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // "띵동" (Ding-Dong Chime) Sound Effect for Correct Answer
+    function playCorrectChimeSound() {
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+
+        // '띵' (Tone 1: E5 ~ 659.25Hz)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        
+        gain1.gain.setValueAtTime(0, now);
+        gain1.gain.linearRampToValueAtTime(0.35, now + 0.01);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.36);
+
+        // '동' (Tone 2: C5 ~ 523.25Hz) played slightly after
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(523.25, now + 0.12);
+
+        gain2.gain.setValueAtTime(0, now + 0.12);
+        gain2.gain.linearRampToValueAtTime(0.4, now + 0.13);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.56);
+      } catch (e) {}
+    }
+
+    // "삐" (Low Buzz) Sound Effect for Incorrect Answer
+    function playWrongBuzzerSound() {
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now); // Low jarring tone
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } catch (e) {}
+    }
+
+    /* ==========================================================================
+       LOCALSTORAGE PERSISTENCE & CONTROL FUNCTIONS
+       ========================================================================== */
+    function loadSavedStats() {
+      const savedScore = localStorage.getItem('note_trainer_best_score');
+      const savedStreak = localStorage.getItem('note_trainer_best_streak');
+      if (savedScore) bestScore = parseInt(savedScore, 10);
+      if (savedStreak) bestStreak = parseInt(savedStreak, 10);
+      updateStats();
+    }
+
+    function saveStats() {
+      if (currentStreak > bestStreak) bestStreak = currentStreak;
+      localStorage.setItem('note_trainer_best_score', bestScore.toString());
+      localStorage.setItem('note_trainer_best_streak', bestStreak.toString());
+    }
+
+    function setClef(clef) {
+      currentClefMode = clef;
+      document.querySelectorAll('.clef-btn').forEach(btn => {
+        btn.className = 'clef-btn px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all';
+      });
+      const activeBtn = document.getElementById(`clef-${clef}`);
+      if (activeBtn) {
+        activeBtn.className = 'clef-btn px-2.5 py-1.5 rounded-lg font-bold transition-all bg-indigo-600 text-white shadow';
+      }
+      nextQuestion();
+    }
+
+    function setDifficulty(diff) {
+      currentDifficulty = diff;
+      document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.className = 'diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white transition-all flex-1 sm:flex-initial text-center';
+      });
+      const activeBtn = document.getElementById(`diff-${diff}`);
+      if (activeBtn) {
+        if (diff === 'timeattack') {
+          activeBtn.className = 'diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold bg-rose-600 text-white shadow transition-all flex items-center justify-center gap-1 flex-1 sm:flex-initial';
+        } else {
+          activeBtn.className = 'diff-btn px-2.5 sm:px-3 py-1.5 rounded-lg font-bold bg-emerald-600 text-white shadow transition-all flex-1 sm:flex-initial text-center';
+        }
+      }
+
+      const timerBox = document.getElementById('timer-box');
+      if (diff === 'timeattack') {
+        timerBox.classList.remove('hidden');
+        startTimer();
+      } else {
+        timerBox.classList.add('hidden');
+        stopTimer();
+      }
+      nextQuestion();
+    }
+
+    function toggleNotationSystem() {
+      notationSystem = notationSystem === 'CDEFG' ? 'SOLFEGE' : 'CDEFG';
+      document.getElementById('notation-label').textContent = notationSystem === 'CDEFG' ? '표기: CDEFG' : '표기: 도레미';
+      renderKeyboardButtons();
+    }
+
+    function toggleCheatSheet() {
+      const modal = document.getElementById('cheatsheet-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    function renderKeyboardButtons() {
+      keyboardButtonsContainer.innerHTML = '';
+      NOTE_NAMES.forEach(note => {
+        const displayLabel = notationSystem === 'CDEFG' ? note : SOLFEGE_MAP[note];
+        const btn = document.createElement('button');
+        btn.onclick = () => handleAnswer(note);
+        btn.setAttribute('data-note', note);
+        btn.className = 'keycap bg-slate-900 hover:bg-indigo-600 hover:text-white text-slate-100 font-black py-2.5 sm:py-4 rounded-xl sm:rounded-2xl border border-slate-800 text-sm sm:text-xl transition-all flex flex-col items-center justify-center min-h-[50px] sm:min-h-[64px]';
+        
+        btn.innerHTML = `
+          <span>${displayLabel}</span>
+          <span class="text-[8px] sm:text-[9px] font-semibold opacity-40">${notationSystem === 'CDEFG' ? SOLFEGE_MAP[note] : note}</span>
+        `;
+        keyboardButtonsContainer.appendChild(btn);
+      });
+    }
+
+    // Next Question Logic
+    function nextQuestion() {
+      isProcessingAnswer = false;
+
+      // Determine Clef
+      if (currentClefMode === 'mixed') {
+        activeClef = Math.random() < 0.5 ? 'treble' : 'bass';
+      } else {
+        activeClef = currentClefMode;
+      }
+
+      // Choose note pool based on difficulty
+      let pool;
+      if (activeClef === 'treble') {
+        pool = currentDifficulty === 'easy' ? TREBLE_NOTES_EASY : TREBLE_NOTES_EXTENDED;
+      } else {
+        pool = currentDifficulty === 'easy' ? BASS_NOTES_EASY : BASS_NOTES_EXTENDED;
+      }
+
+      // Select random note different from previous
+      let newNote;
+      do {
+        newNote = pool[Math.floor(Math.random() * pool.length)];
+      } while (pool.length > 1 && currentNote && newNote.label === currentNote.label && activeClef === currentNote._clef);
+
+      newNote._clef = activeClef;
+      currentNote = newNote;
+
+      renderStaff();
+    }
+
+    // Render Staff SVG
+    function renderStaff() {
+      if (activeClef === 'treble') {
+        renderedClef.setAttribute('href', '#treble-clef');
+        clefIndicator.textContent = '높은음자리표 (Treble Clef)';
+        clefIndicator.className = 'absolute top-4 left-5 text-xs font-bold px-3 py-1 rounded-xl bg-indigo-950/80 text-indigo-300 border border-indigo-700/50 shadow-md';
+      } else {
+        renderedClef.setAttribute('href', '#bass-clef');
+        clefIndicator.textContent = '낮음음자리표 (Bass Clef)';
+        clefIndicator.className = 'absolute top-4 left-5 text-xs font-bold px-3 py-1 rounded-xl bg-amber-950/80 text-amber-300 border border-amber-700/50 shadow-md';
+      }
+
+      const baseY = 114;
+      const noteY = baseY - (currentNote.step * 8);
+
+      noteGroup.setAttribute('transform', `translate(210, ${noteY})`);
+
+      // Stem orientation
+      if (currentNote.step >= 4) {
+        noteStem.setAttribute('x1', '-9');
+        noteStem.setAttribute('y1', '0');
+        noteStem.setAttribute('x2', '-9');
+        noteStem.setAttribute('y2', '45');
+      } else {
+        noteStem.setAttribute('x1', '9');
+        noteStem.setAttribute('y1', '0');
+        noteStem.setAttribute('x2', '9');
+        noteStem.setAttribute('y2', '-45');
+      }
+
+      // Ledger Lines
+      ledgerLinesGroup.innerHTML = '';
+      if (currentNote.step < 0) {
+        for (let s = -2; s >= currentNote.step; s -= 2) {
+          const ly = baseY - (s * 8);
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', '190');
+          line.setAttribute('x2', '230');
+          line.setAttribute('y1', ly);
+          line.setAttribute('y2', ly);
+          ledgerLinesGroup.appendChild(line);
+        }
+      }
+      if (currentNote.step > 8) {
+        for (let s = 10; s <= currentNote.step; s += 2) {
+          const ly = baseY - (s * 8);
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', '190');
+          line.setAttribute('x2', '230');
+          line.setAttribute('y1', ly);
+          line.setAttribute('y2', ly);
+          ledgerLinesGroup.appendChild(line);
+        }
+      }
+    }
+
+    /* Handle Answer Check */
+    function handleAnswer(selectedNote) {
+      if (isProcessingAnswer || !currentNote) return;
+      isProcessingAnswer = true;
+
+      totalAttempts++;
+      const isCorrect = (selectedNote.toUpperCase() === currentNote.name);
+
+      // Button press effect
+      const btn = document.querySelector(`button[data-note="${selectedNote}"]`);
+      if (btn) {
+        btn.classList.add('active');
+        setTimeout(() => btn.classList.remove('active'), 150);
+      }
+
+      if (isCorrect) {
+        correctCount++;
+        currentStreak++;
+        currentScore += 10 + Math.floor(currentStreak / 3) * 5; // Bonus points for combo
+
+        if (currentScore > bestScore) {
+          bestScore = currentScore;
+          saveStats();
+        }
+
+        playCorrectChimeSound(); // "띵동" sound
+        showFeedback(true, `정답! ${currentNote.name} (${SOLFEGE_MAP[currentNote.name]})`);
+        flashCard('correct');
+
+        // Milestone popup for combos
+        if (currentStreak > 0 && currentStreak % 5 === 0) {
+          showStreakPopup(currentStreak);
+        }
+      } else {
+        currentStreak = 0;
+        playWrongBuzzerSound(); // "삐" sound
+        showFeedback(false, `오답! 정답: ${currentNote.name} (${SOLFEGE_MAP[currentNote.name]})`);
+        flashCard('wrong');
+      }
+
+      updateStats();
+
+      // Next question delay
+      setTimeout(() => {
+        nextQuestion();
+      }, isCorrect ? 400 : 800);
+    }
+
+    // Feedback display banner
+    function showFeedback(isCorrect, text) {
+      feedbackBanner.textContent = text;
+      feedbackBanner.className = `absolute top-4 right-5 text-xs sm:text-sm font-black px-3.5 py-1.5 rounded-xl shadow-lg transition-all duration-300 ${
+        isCorrect ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+      }`;
+      feedbackBanner.style.opacity = '1';
+      feedbackBanner.style.transform = 'translateY(0)';
+
+      setTimeout(() => {
+        feedbackBanner.style.opacity = '0';
+        feedbackBanner.style.transform = 'translateY(-8px)';
+      }, 700);
+    }
+
+    // Milestone Streak Popup
+    function showStreakPopup(streak) {
+      const popup = document.getElementById('streak-popup');
+      document.getElementById('streak-pop-title').textContent = `${streak} COMBO!`;
+      document.getElementById('streak-pop-sub').textContent = streak >= 15 ? '놀라운 실력입니다! 🏆' : '완벽해요! 계속 유지하세요! 🔥';
+      popup.classList.remove('hidden');
+
+      setTimeout(() => {
+        popup.classList.add('hidden');
+      }, 1000);
+    }
+
+    // Card Glow Effect
+    function flashCard(type) {
+      const animClass = type === 'correct' ? 'staff-glow-correct' : 'staff-glow-wrong';
+      staffCard.classList.add(animClass);
+      setTimeout(() => staffCard.classList.remove(animClass), 500);
+    }
+
+    // Update Stats UI
+    function updateStats() {
+      const accuracy = totalAttempts > 0 ? ((correctCount / totalAttempts) * 100).toFixed(1) : '0.0';
+      
+      statAccuracy.textContent = `${accuracy}%`;
+      statStreak.textContent = `${currentStreak} 🔥`;
+      statCount.textContent = `${correctCount} / ${totalAttempts}`;
+      statBest.textContent = `${bestScore}`;
+    }
+
+    // Reset Stats
+    function resetStats(resetBest = false) {
+      totalAttempts = 0;
+      correctCount = 0;
+      currentStreak = 0;
+      currentScore = 0;
+      if (resetBest) {
+        bestScore = 0;
+        bestStreak = 0;
+        localStorage.removeItem('note_trainer_best_streak');
+        localStorage.removeItem('note_trainer_best_score');
+      }
+      updateStats();
+      if (currentDifficulty === 'timeattack') {
+        startTimer();
+      }
+      nextQuestion();
+    }
+
+    /* ==========================================================================
+       TIME ATTACK TIMER ENGINE
+       ========================================================================== */
+    function startTimer() {
+      stopTimer();
+      timeLeft = 60;
+      isTimerActive = true;
+      document.getElementById('timer-display').textContent = timeLeft;
+      document.getElementById('gameover-modal').classList.add('hidden');
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer-display').textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          endTimerGame();
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      isTimerActive = false;
+    }
+
+    function endTimerGame() {
+      stopTimer();
+      const accuracy = totalAttempts > 0 ? ((correctCount / totalAttempts) * 100).toFixed(1) : '0.0';
+      
+      document.getElementById('modal-score').textContent = `${currentScore}점`;
+      document.getElementById('modal-accuracy').textContent = `${accuracy}%`;
+      document.getElementById('modal-maxstreak').textContent = `${bestStreak}회`;
+      
+      document.getElementById('gameover-modal').classList.remove('hidden');
+    }
+
+    function restartGame() {
+      resetStats(false);
+      document.getElementById('gameover-modal').classList.add('hidden');
+    }
+
+    function stopTimeAttackMode() {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      setDifficulty('easy');
+    }
+
+    /* ==========================================================================
+       KEYBOARD LISTENER
+       ========================================================================== */
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.altKey || e.metaKey || document.getElementById('cheatsheet-modal').classList.contains('hidden') === false) return;
+      
+      const key = e.key.toUpperCase();
+      if (['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(key)) {
+        e.preventDefault();
+        handleAnswer(key);
+      }
+    });
+
+    /* INITIALIZATION */
+    window.onload = () => {
+      loadSavedStats();
+      renderKeyboardButtons();
+      nextQuestion();
+    };
+  </script>
+</body>
+</html>
